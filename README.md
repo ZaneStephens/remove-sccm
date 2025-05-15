@@ -1,44 +1,42 @@
-# SCCM Client Removal Script: Enhancements Explained
+# SCCM Client Removal Script
 
-The provided PowerShell script for removing the SCCM client has been revised to incorporate several improvements focusing on robustness, error handling, logging, and modern PowerShell practices. Here's a breakdown of the key changes:
+## Overview
+This PowerShell script provides a robust solution for completely removing the System Center Configuration Manager (SCCM) client from a Windows system. The script starts with a standard uninstall attempt and then meticulously cleans up services, WMI namespaces, registry entries, and files, all while keeping you informed with detailed logs.
 
-## Script Structure and Best Practices:
-- **CmdletBinding and SupportsShouldProcess**: Added `[CmdletBinding(SupportsShouldProcess = $true)]` to enable common parameters like `-Verbose`, `-Debug`, and importantly, `-Confirm` and `-WhatIf`. This allows for safer execution by previewing changes before they are made.
-- **Administrator Check**: The script now explicitly checks if it's running with Administrator privileges and exits if not.
-- **BEGIN, PROCESS, END Blocks**: The script is structured into `begin`, `process`, and `end` blocks for better organization and initialization/cleanup tasks.
-- **Logging Function (Write-Log)**: A custom `Write-Log` function is introduced to standardize log messages with timestamps and severity levels (INFO, WARN, ERROR). This makes the script's output much clearer.
-- **Comments**: Added more detailed comments explaining each section and its purpose.
+## Why Use This Script?
+Manually removing the SCCM client can be tedious and error-prone due to its deep integration with Windows. This script automates the process, handling edge cases and potential failures gracefully. It’s built with safety in mind, offering options to preview or confirm actions, making it suitable for both one-off use and deployment in managed environments.
 
-## Graceful Uninstall Improvement:
-- **Path Construction**: Used `Join-Path` for constructing `$CcmSetupPath` which is more robust than string concatenation.
-- **Process Handling**: `Start-Process` now uses `-PassThru` to get the process object, allowing for checking the `ExitCode` of the uninstaller.
-- **ErrorAction**: Maintained `ErrorAction SilentlyContinue` for `Start-Process` itself, as failure to start might be acceptable if the client is already partially removed, but logs a warning.
+## How It Works
+The script operates in a structured sequence:
+- Attempts a standard uninstall using the SCCM-provided `ccmsetup.exe /uninstall`.
+- Stops and deletes SCCM-related services, ensuring they’re fully terminated.
+- Cleans up SCCM-specific WMI namespaces for a thorough removal.
+- Removes associated registry keys and file system artifacts, like installation directories and cache.
+- Logs every step with timestamps and severity levels for easy tracking and troubleshooting.
 
-## Service Management:
-- **Service List**: Services are defined in an array (`$SccmServices`) for easier management.
-- **Service Stop with Timeout**: The script now actively waits for services to stop using a `while` loop and a timeout, providing more reliable service termination before attempting deletion.
-- **Service Deletion**: Uses `sc.exe delete $ServiceName` for deleting services. This is a more direct way to remove service entries. It also checks `$LASTEXITCODE` from `sc.exe`.
-- **Process Termination**: Added a specific step to ensure the `CcmExec` process is terminated, using `Stop-Process -Force` if necessary, after attempting to stop the service.
+It also checks for administrative privileges to ensure it can perform all necessary actions without interruption.
 
-## WMI Namespace Removal:
-- **Modern Cmdlet**: Switched from `Get-WmiObject` and `Remove-WmiObject` to the more modern `Get-CimInstance` and `Remove-CimInstance`.
-- **Error Handling**: Encapsulated in a `try/catch` block to handle potential errors during WMI operations more gracefully and log them.
-- **Existence Check**: `Get-CimInstance` is used to check if the namespace exists before attempting removal.
+## Getting Started
+To use the script effectively, follow these steps:
 
-## Registry and File System Operations:
-- **Path Arrays**: Paths for registry keys and file system items are stored in arrays for easier iteration.
-- **Test-Path Before Removal**: The script now checks if a registry key or file/folder exists using `Test-Path` before attempting to remove it. This avoids unnecessary errors and allows for specific logging if an item is already gone.
-- **ShouldProcess Integration**: All removal operations (`Remove-Item`, `sc.exe delete`, `Remove-CimInstance`) are wrapped in `if ($PSCmdlet.ShouldProcess(...))` blocks. This means if you run the script with `-WhatIf`, it will show you what it would do without actually doing it. If you run with `-Confirm`, it will ask for confirmation before each destructive action.
-- **Wildcard File Removal**: The duplicate `SMS*.mif` removal was consolidated. `Get-ChildItem` is used to find files matching the pattern before piping to `Remove-Item`.
-- **Feedback on Removal**: Added checks after `Remove-Item` to log whether the removal was successful or if the item still exists.
+1. **Run as Administrator**: Launch PowerShell with elevated privileges, as the script modifies system-level components.
+2. **Execute the Script**: Navigate to the script’s directory and run it with:
+   ```powershell
+   .\remove-sccmagent.ps1
+   ```
+3. **Preview Actions (Optional)**: Add the `-WhatIf` switch to see what the script will do without making changes:
+   ```powershell
+   .\remove-sccmagent.ps1 -WhatIf
+   ```
+4. **Confirm Actions (Optional)**: Use the `-Confirm` switch to approve each step manually:
+   ```powershell
+   .\remove-sccmagent.ps1 -Confirm
+   ```
+5. **Review Output**: Check the console for detailed logs to verify what was done or diagnose issues.
 
-## Error Handling and Logging:
-- **Specific try/catch Blocks**: More specific `try/catch` blocks are used around operations that might fail (e.g., WMI, service deletion).
-- **Informative Logging**: The `Write-Log` function provides consistent and informative output, including warnings for non-critical issues (e.g., item not found) and errors for critical failures.
-- **Main try/catch Block**: The entire `process` block is wrapped in a `try/catch` to capture any unexpected script-terminating errors.
+## Tips and Precautions
+- **Backup First**: Since the script makes significant system changes, back up critical data beforehand.
+- **Reboot After**: A restart may be needed to fully apply all changes.
+- **Test It Out**: Try it in a lab environment first to understand its impact on your systems.
 
-## Clarity and Readability:
-- **Variable Names**: Maintained clear variable names.
-- **Code Formatting**: Improved code formatting for better readability.
-
-This revised script is more robust, provides better feedback during execution, and incorporates safety features like `-WhatIf` support. Remember to always test such scripts in a non-production environment first.
+This script is designed to be both powerful and user-friendly, giving you confidence in managing SCCM client removals.
