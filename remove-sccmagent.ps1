@@ -16,10 +16,6 @@
     It includes verbose logging and improved error handling.
 
 .NOTES
-    Author: Your Name/Company
-    Version: 2.0
-    Date: 2025-05-15
-
     Run this script with administrative privileges.
     Use with caution, as this script performs significant system modifications.
     It is recommended to back up critical data before running this script.
